@@ -23,21 +23,24 @@ async def init_database():
         db_manager = DatabaseManager()
         
         # Create tables
-        await db_manager.create_tables()
+        await db_manager.initialize()
         
         print("✅ Database initialized successfully!")
         print("📊 Created tables:")
         print("   - markets")
         print("   - positions") 
         print("   - trade_logs")
-        print("   - ai_analyses")
-        print("   - performance_metrics")
+        print("   - market_analyses")
+        print("   - llm_queries")
+        print("   - daily_cost_tracking")
         
         # Close database connection
         await db_manager.close()
         
     except Exception as e:
         print(f"❌ Database initialization failed: {e}")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
 
 

@@ -866,14 +866,19 @@ class DatabaseManager(TradingLoggerMixin):
             return count > 0
 
     async def get_daily_ai_cost(self, date: str = None) -> float:
-        """Get total AI cost for a specific date (defaults to today)."""
+        """Get total AI cost for a specific date (defaults to today) from llm_queries."""
         if date is None:
-            date = datetime.now().strftime('%Y-%m-%d')
+            # Get today's start timestamp
+            today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        else:
+            # Parse date string and get start of that day
+            today_start = datetime.strptime(date, '%Y-%m-%d').replace(hour=0, minute=0, second=0, microsecond=0)
         
         async with aiosqlite.connect(self.db_path) as db:
             cursor = await db.execute("""
-                SELECT total_ai_cost FROM daily_cost_tracking WHERE date = ?
-            """, (date,))
+                SELECT COALESCE(SUM(cost_usd), 0.0) FROM llm_queries 
+                WHERE timestamp >= ?
+            """, (today_start.isoformat(),))
             row = await cursor.fetchone()
             return row[0] if row else 0.0
 

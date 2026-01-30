@@ -46,7 +46,7 @@ async def process_and_queue_markets(
                     market_data["expiration_time"].replace("Z", "+00:00")
                 ).timestamp()
             ),
-            category=market_data["category"],
+            category=market_data.get("category", "unknown"),  # Handle missing category gracefully
             status=market_data["status"],
             last_updated=datetime.now(),
             has_position=has_position,
@@ -57,9 +57,9 @@ async def process_and_queue_markets(
         await db_manager.upsert_markets(markets_to_upsert)
         logger.info(f"Successfully upserted {len(markets_to_upsert)} markets.")
 
-        # Primary filtering criteria - MORE PERMISSIVE FOR MORE OPPORTUNITIES!
-        min_volume: float = 100.0  # DECREASED: Much lower volume threshold (was 100, keeping low)
-        min_volume_for_ai_analysis: float = 150.0  # DECREASED: Lower volume for AI analysis (was 200, now 150)  
+        # Primary filtering criteria - INCREASED for better liquidity
+        min_volume: float = 500.0  # INCREASED: Higher volume threshold for better execution (was 100, now 500)
+        min_volume_for_ai_analysis: float = 1000.0  # INCREASED: Higher volume for AI analysis (was 150, now 1000)  
         preferred_categories: List[str] = []  # Empty = all categories allowed
         excluded_categories: List[str] = []  # Empty = no categories excluded
 

@@ -357,16 +357,49 @@ class BeastModeDashboard:
             return {}
 
     async def _get_cost_analysis(self) -> Dict:
-        """Get AI cost analysis."""
+        """Get AI cost analysis from llm_queries table."""
         try:
-            # This would analyze AI spending patterns
+            import aiosqlite
+            from datetime import datetime, timedelta
+            
+            today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            week_ago = today_start - timedelta(days=7)
+            
+            async with aiosqlite.connect(self.db_manager.db_path) as db:
+                # Get today's analysis count and cost from llm_queries
+                cursor = await db.execute("""
+                    SELECT COUNT(*), COALESCE(SUM(cost_usd), 0) 
+                    FROM llm_queries 
+                    WHERE timestamp >= ?
+                """, (today_start.isoformat(),))
+                today_row = await cursor.fetchone()
+                
+                # Get weekly total
+                cursor = await db.execute("""
+                    SELECT COALESCE(SUM(cost_usd), 0)
+                    FROM llm_queries 
+                    WHERE timestamp >= ?
+                """, (week_ago.isoformat(),))
+                weekly_row = await cursor.fetchone()
+                
+                analyses_today = today_row[0] if today_row else 0
+                cost_today = today_row[1] if today_row else 0.0
+                weekly_cost = weekly_row[0] if weekly_row else 0.0
+                
+                avg_cost = (cost_today / analyses_today) if analyses_today > 0 else 0.0
+                
+                return {
+                    'analyses_today': analyses_today,
+                    'avg_cost_per_analysis': avg_cost,
+                    'total_weekly_cost': weekly_cost
+                }
+        except Exception as e:
+            print(f"Error in cost analysis: {e}")
             return {
                 'analyses_today': 0,
                 'avg_cost_per_analysis': 0.0,
                 'total_weekly_cost': 0.0
             }
-        except Exception as e:
-            return {}
 
     def _calculate_avg_time_to_expiry(self, positions) -> float:
         """Calculate average time to expiry for positions."""

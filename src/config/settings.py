@@ -32,8 +32,8 @@ class TradingConfig:
     max_positions: int = 15              # INCREASED: Allow 15 concurrent positions (was 10)
     min_balance: float = 50.0           # REDUCED: Lower minimum to trade more (was 100)
     
-    # Market filtering criteria - MUCH MORE PERMISSIVE
-    min_volume: float = 200.0            # DECREASED: Much lower volume requirement (was 500, now 200)
+    # Market filtering criteria - INCREASED for better liquidity
+    min_volume: float = 1000.0           # INCREASED: Higher volume requirement for good execution (was 200, now 1000)
     max_time_to_expiry_days: int = 30    # INCREASED: Allow longer timeframes (was 14, now 30)
     
     # AI decision making - MORE AGGRESSIVE THRESHOLDS
@@ -77,18 +77,21 @@ class TradingConfig:
     min_confidence_threshold: float = 0.45  # DECREASED: Lower confidence threshold (was 0.55, now 0.45)
 
     # Cost control and market analysis frequency - MORE PERMISSIVE
-    daily_ai_budget: float = 10.0  # INCREASED: Higher daily budget (was 5.0, now 10.0)
+    daily_ai_budget: float = 30.0  # INCREASED: Higher daily budget (was 10.0, now 30.0)
     max_ai_cost_per_decision: float = 0.08  # INCREASED: Higher per-decision cost (was 0.05, now 0.08)
     analysis_cooldown_hours: int = 3  # DECREASED: Shorter cooldown (was 6, now 3)
     max_analyses_per_market_per_day: int = 4  # INCREASED: More analyses per day (was 2, now 4)
+    
+    # Volume filtering - INCREASED for better liquidity
+    min_volume_for_ai_analysis: float = 1000.0  # Minimum 1000 contracts for good execution (~$500 traded)
     
     # Daily AI spending limits - SAFETY CONTROLS
     daily_ai_cost_limit: float = 50.0  # Maximum daily spending on AI API calls (USD)
     enable_daily_cost_limiting: bool = True  # Enable daily cost limits
     sleep_when_limit_reached: bool = True  # Sleep until next day when limit reached
 
-    # Enhanced market filtering to reduce analyses - MORE PERMISSIVE
-    min_volume_for_ai_analysis: float = 200.0  # DECREASED: Much lower threshold (was 500, now 200)
+    # Enhanced market filtering - INCREASED for better liquidity (DUPLICATE - using value above)
+    # min_volume_for_ai_analysis: float = 1000.0  # Set above, this is a duplicate
     exclude_low_liquidity_categories: List[str] = field(default_factory=lambda: [
         # REMOVED weather and entertainment - trade all categories
     ])
@@ -154,18 +157,18 @@ max_inventory_risk: float = 0.15        # INCREASED: Allow higher inventory risk
 order_refresh_minutes: int = 15         # Refresh orders every 15 minutes
 max_orders_per_market: int = 4          # Maximum orders per market (2 each side)
 
-# === MARKET SELECTION (ENHANCED FOR MORE OPPORTUNITIES) ===
+# === MARKET SELECTION (INCREASED FOR BETTER LIQUIDITY) ===
 # Removed time restrictions - trade ANY deadline with dynamic exits!
 # max_time_to_expiry_days: REMOVED      # No longer used - trade any timeline!
-min_volume_for_analysis: float = 200.0  # DECREASED: Much lower minimum volume (was 1000, now 200)
-min_volume_for_market_making: float = 500.0  # DECREASED: Lower volume for market making (was 2000, now 500)
+min_volume_for_analysis: float = 1000.0  # INCREASED: Higher minimum volume for better execution (was 200, now 1000)
+min_volume_for_market_making: float = 2000.0  # INCREASED: Higher volume for market making (was 500, now 2000)
 min_price_movement: float = 0.02        # DECREASED: Lower minimum range (was 0.05, now 2¢)
 max_bid_ask_spread: float = 0.15        # INCREASED: Allow wider spreads (was 0.10, now 15¢)
 min_confidence_long_term: float = 0.45  # DECREASED: Lower confidence for distant expiries (was 0.65, now 45%)
 
 # === COST OPTIMIZATION (MORE GENEROUS) ===
 # Enhanced cost controls for the beast mode system
-daily_ai_budget: float = 15.0           # INCREASED: Higher budget for more opportunities (was 10.0, now 15.0)
+daily_ai_budget: float = 30.0           # INCREASED: Higher budget for more opportunities (was 15.0, now 30.0)
 max_ai_cost_per_decision: float = 0.12  # INCREASED: Higher per-decision limit (was 0.08, now 0.12)
 analysis_cooldown_hours: int = 2        # DECREASED: Much shorter cooldown (was 4, now 2)
 max_analyses_per_market_per_day: int = 6  # INCREASED: More analyses per day (was 3, now 6)

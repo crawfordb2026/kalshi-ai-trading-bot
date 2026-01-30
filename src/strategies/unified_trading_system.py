@@ -775,6 +775,19 @@ class UnifiedAdvancedTradingSystem:
         Get comprehensive system performance summary.
         """
         try:
+            # Check if system is initialized
+            if not hasattr(self, 'market_maker'):
+                return {
+                    'system_status': 'initializing',
+                    'total_capital': self.total_capital,
+                    'capital_allocation': {
+                        'market_making': self.config.market_making_allocation,
+                        'directional': self.config.directional_trading_allocation,
+                        'arbitrage': self.config.arbitrage_allocation
+                    },
+                    'message': 'System initializing - waiting for async_initialize() to complete'
+                }
+            
             # Get individual strategy performance
             mm_performance = self.market_maker.get_performance_summary()
             
