@@ -42,7 +42,7 @@ async def should_exit_position(
             exit_price = current_price
         return True, "market_resolution", exit_price
     
-    # 2. ENHANCED Stop-loss exit using proper logic for YES/NO positions
+    # 2. Stop-loss exit using proper logic for YES/NO positions
     if position.stop_loss_price:
         from src.utils.stop_loss_calculator import StopLossCalculator
         
@@ -63,16 +63,11 @@ async def should_exit_position(
             )
             return True, f"stop_loss_triggered_pnl_{expected_pnl:.2f}", current_price
     
-    # 3. Take-profit exit (enhanced logic for YES/NO)
+    # 3. Take-profit exit (Both YES and NO work the same way)
     if position.take_profit_price:
-        take_profit_triggered = False
-        
-        if position.side == "YES":
-            # For YES positions, take profit when price rises above target
-            take_profit_triggered = current_price >= position.take_profit_price
-        else:
-            # For NO positions, take profit when price falls below target
-            take_profit_triggered = current_price <= position.take_profit_price
+        # For both YES and NO positions, take profit when price rises above target
+        # You profit when the price you bought goes UP
+        take_profit_triggered = current_price >= position.take_profit_price
             
         if take_profit_triggered:
             return True, "take_profit", current_price
@@ -165,7 +160,9 @@ async def run_tracking(db_manager: Optional[DatabaseManager] = None):
             logger.info(f"   Stop-loss: {stop_loss_results['orders_placed']} orders")
         
         # Step 2: Continue with existing position tracking (market resolution, etc.)
-        open_positions = await db_manager.get_open_live_positions()
+        # FIXED: Use get_open_positions() instead of get_open_live_positions() to track ALL positions
+        # In paper trading, positions may not be marked as live=1, but we still need to track them
+        open_positions = await db_manager.get_open_positions()
 
         if not open_positions:
             logger.info("No open positions to track.")
@@ -190,8 +187,19 @@ async def run_tracking(db_manager: Optional[DatabaseManager] = None):
                 market_status = market_data.get('status', 'unknown')
                 market_result = market_data.get('result')  # Market resolution result
                 
-                # If position doesn't have exit strategy set, calculate defaults
+                # If position doesn't have exit strategy set, or has incorrect values, recalculate
+                # FIXED: Detect and fix incorrect exit levels (e.g., stop-loss above entry for NO positions)
+                needs_recalculation = False
                 if not position.stop_loss_price and not position.take_profit_price:
+                    needs_recalculation = True
+                elif position.stop_loss_price and position.take_profit_price:
+                    # Check if exit levels are backwards (common bug from before the fix)
+                    # For both YES and NO: stop-loss should be BELOW entry, take-profit should be ABOVE entry
+                    if position.stop_loss_price > position.entry_price and position.take_profit_price < position.entry_price:
+                        logger.warning(f"⚠️ Detected backwards exit levels for {position.market_id}. Recalculating...")
+                        needs_recalculation = True
+                
+                if needs_recalculation:
                     logger.info(f"Setting up exit strategy for position {position.market_id}")
                     exit_levels = await calculate_dynamic_exit_levels(position)
                     

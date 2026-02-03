@@ -159,8 +159,9 @@ async def place_profit_taking_orders(
     results = {'orders_placed': 0, 'positions_processed': 0}
     
     try:
-        # Get all open live positions
-        positions = await db_manager.get_open_live_positions()
+        # Get all open positions (both live and paper trading)
+        # FIXED: Changed from get_open_live_positions() to get_open_positions() to support paper trading
+        positions = await db_manager.get_open_positions()
         
         if not positions:
             logger.info("No open positions to process for profit taking")
@@ -247,8 +248,9 @@ async def place_stop_loss_orders(
     results = {'orders_placed': 0, 'positions_processed': 0}
     
     try:
-        # Get all open live positions
-        positions = await db_manager.get_open_live_positions()
+        # Get all open positions (both live and paper trading)
+        # FIXED: Changed from get_open_live_positions() to get_open_positions() to support paper trading
+        positions = await db_manager.get_open_positions()
         
         if not positions:
             logger.info("No open positions to process for stop-loss orders")

@@ -88,14 +88,19 @@ class StopLossCalculator:
             take_profit_pct = cls.MIN_TAKE_PROFIT_PCT  # 15% for low confidence
             
         # Calculate actual price levels based on side
+        # FIXED: Both YES and NO positions work the same way
+        # You profit when the price you bought goes UP, lose when it goes DOWN
+        # The inverse relationship (YES + NO = $1.00) doesn't change this
         if side.upper() == "YES":
             # For YES positions, stop-loss is below entry, take-profit is above
             stop_loss_price = entry_price * (1 - adjusted_stop_loss_pct)
             take_profit_price = entry_price * (1 + take_profit_pct)
         else:
-            # For NO positions, stop-loss is above entry, take-profit is below  
-            stop_loss_price = entry_price * (1 + adjusted_stop_loss_pct)
-            take_profit_price = entry_price * (1 - take_profit_pct)
+            # For NO positions, same logic: stop-loss below entry, take-profit above
+            # When NO price drops, you lose (stop-loss triggers)
+            # When NO price rises, you profit (take-profit triggers)
+            stop_loss_price = entry_price * (1 - adjusted_stop_loss_pct)
+            take_profit_price = entry_price * (1 + take_profit_pct)
             
         # Ensure prices are within valid bounds (1¢ to 99¢)
         stop_loss_price = max(0.01, min(0.99, stop_loss_price))
@@ -133,10 +138,11 @@ class StopLossCalculator:
         Returns:
             Stop-loss price
         """
+        # FIXED: Both YES and NO use same logic - stop-loss below entry
         if side.upper() == "YES":
             stop_loss_price = entry_price * (1 - stop_loss_pct)
         else:
-            stop_loss_price = entry_price * (1 + stop_loss_pct)
+            stop_loss_price = entry_price * (1 - stop_loss_pct)
             
         return max(0.01, min(0.99, round(stop_loss_price, 2)))
     
@@ -160,12 +166,14 @@ class StopLossCalculator:
         Returns:
             True if stop-loss should be triggered
         """
+        # FIXED: Both YES and NO positions trigger stop-loss the same way
+        # Stop-loss is always BELOW entry, so trigger when price drops below it
         if position_side.upper() == "YES":
             # For YES positions, trigger if price drops below stop-loss
             return current_price <= stop_loss_price
         else:
-            # For NO positions, trigger if price rises above stop-loss
-            return current_price >= stop_loss_price
+            # For NO positions, same logic: trigger if price drops below stop-loss
+            return current_price <= stop_loss_price
     
     @classmethod
     def calculate_pnl_at_stop_loss(
@@ -181,10 +189,10 @@ class StopLossCalculator:
         Returns:
             Expected P&L (negative for loss)
         """
-        if side.upper() == "YES":
-            pnl_per_share = stop_loss_price - entry_price
-        else:
-            pnl_per_share = entry_price - stop_loss_price
+        # FIXED: Both YES and NO positions calculate P&L the same way
+        # P&L = (exit_price - entry_price) × quantity
+        # For stop-loss, exit_price is stop_loss_price (which is below entry, so negative)
+        pnl_per_share = stop_loss_price - entry_price
             
         return pnl_per_share * quantity
 

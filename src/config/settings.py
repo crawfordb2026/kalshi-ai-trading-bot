@@ -32,8 +32,8 @@ class TradingConfig:
     max_positions: int = 15              # INCREASED: Allow 15 concurrent positions (was 10)
     min_balance: float = 50.0           # REDUCED: Lower minimum to trade more (was 100)
     
-    # Market filtering criteria - INCREASED for better liquidity
-    min_volume: float = 1000.0           # INCREASED: Higher volume requirement for good execution (was 200, now 1000)
+    # Market filtering criteria - ALIGNED with AI analysis threshold
+    min_volume: float = 200.0           # Aligned with min_volume_for_ai_analysis to allow more trading opportunities
     max_time_to_expiry_days: int = 30    # INCREASED: Allow longer timeframes (was 14, now 30)
     
     # AI decision making - MORE AGGRESSIVE THRESHOLDS
@@ -82,8 +82,8 @@ class TradingConfig:
     analysis_cooldown_hours: int = 3  # DECREASED: Shorter cooldown (was 6, now 3)
     max_analyses_per_market_per_day: int = 4  # INCREASED: More analyses per day (was 2, now 4)
     
-    # Volume filtering - INCREASED for better liquidity
-    min_volume_for_ai_analysis: float = 1000.0  # Minimum 1000 contracts for good execution (~$500 traded)
+    # Volume filtering - LOWERED to match unified trading system volume_min=200
+    min_volume_for_ai_analysis: float = 200.0  # Lowered from 1000 to 200 to allow more markets to be analyzed
     
     # Daily AI spending limits - SAFETY CONTROLS
     daily_ai_cost_limit: float = 50.0  # Maximum daily spending on AI API calls (USD)
@@ -160,7 +160,7 @@ max_orders_per_market: int = 4          # Maximum orders per market (2 each side
 # === MARKET SELECTION (INCREASED FOR BETTER LIQUIDITY) ===
 # Removed time restrictions - trade ANY deadline with dynamic exits!
 # max_time_to_expiry_days: REMOVED      # No longer used - trade any timeline!
-min_volume_for_analysis: float = 1000.0  # INCREASED: Higher minimum volume for better execution (was 200, now 1000)
+min_volume_for_analysis: float = 200.0  # Aligned with unified trading system to allow more opportunities
 min_volume_for_market_making: float = 2000.0  # INCREASED: Higher volume for market making (was 500, now 2000)
 min_price_movement: float = 0.02        # DECREASED: Lower minimum range (was 0.05, now 2¢)
 max_bid_ask_spread: float = 0.15        # INCREASED: Allow wider spreads (was 0.10, now 15¢)

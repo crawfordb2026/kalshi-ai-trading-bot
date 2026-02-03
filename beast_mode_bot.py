@@ -58,9 +58,10 @@ class BeastModeBot:
     - Risk management and rebalancing
     """
     
-    def __init__(self, live_mode: bool = False, dashboard_mode: bool = False):
+    def __init__(self, live_mode: bool = False, dashboard_mode: bool = False, dashboard_only: bool = False):
         self.live_mode = live_mode
         self.dashboard_mode = dashboard_mode
+        self.dashboard_only = dashboard_only
         self.logger = get_trading_logger("beast_mode_bot")
         self.shutdown_event = asyncio.Event()
         
@@ -74,11 +75,43 @@ class BeastModeBot:
         )
 
     async def run_dashboard_mode(self):
-        """Run in live dashboard mode with real-time updates."""
+        """
+        Run in dashboard mode.
+
+        - If dashboard_only=True: dashboard UI only (no trading loops).
+        - Otherwise: run dashboard UI + trading engine concurrently.
+        """
         try:
-            self.logger.info("🚀 Starting Beast Mode Dashboard Mode")
+            self.logger.info(
+                "🚀 Starting Beast Mode Dashboard Mode",
+                dashboard_only=self.dashboard_only,
+                live_trading=self.live_mode,
+            )
             dashboard = BeastModeDashboard()
-            await dashboard.show_live_dashboard()
+
+            if self.dashboard_only:
+                await dashboard.show_live_dashboard()
+                return
+
+            # Run dashboard + trading engine in the same process so the UI reflects live activity.
+            dashboard_task = asyncio.create_task(dashboard.show_live_dashboard())
+            trading_task = asyncio.create_task(self.run_trading_mode())
+
+            done, pending = await asyncio.wait(
+                {dashboard_task, trading_task},
+                return_when=asyncio.FIRST_EXCEPTION,
+            )
+
+            # If either task exits (error or Ctrl+C), stop the other.
+            for task in pending:
+                task.cancel()
+            await asyncio.gather(*pending, return_exceptions=True)
+
+            # Re-raise exceptions from completed tasks if any
+            for task in done:
+                exc = task.exception()
+                if exc:
+                    raise exc
         except KeyboardInterrupt:
             self.logger.info("👋 Dashboard mode stopped")
         except Exception as e:
@@ -324,7 +357,12 @@ Beast Mode Features:
     parser.add_argument(
         "--dashboard",
         action="store_true",
-        help="Run in live dashboard mode for monitoring"
+        help="Run dashboard UI (by default also runs trading engine in the background)"
+    )
+    parser.add_argument(
+        "--dashboard-only",
+        action="store_true",
+        help="Run dashboard UI only (no trading / no AI calls)"
     )
     parser.add_argument(
         "--log-level",
@@ -346,7 +384,11 @@ Beast Mode Features:
         print("🚀 LIVE TRADING MODE CONFIRMED")
     
     # Create and run Beast Mode Bot
-    bot = BeastModeBot(live_mode=args.live, dashboard_mode=args.dashboard)
+    bot = BeastModeBot(
+        live_mode=args.live,
+        dashboard_mode=args.dashboard,
+        dashboard_only=args.dashboard_only
+    )
     await bot.run()
 
 

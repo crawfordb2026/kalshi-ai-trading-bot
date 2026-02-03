@@ -61,6 +61,40 @@ class BeastModeDashboard:
             self.db_manager, self.kalshi_client, self.xai_client
         )
 
+    @staticmethod
+    def _to_float(value, default: float = 0.0) -> float:
+        """Best-effort conversion for values that may come back as strings from DB/API layers."""
+        try:
+            if value is None:
+                return default
+            if isinstance(value, (int, float)):
+                return float(value)
+            if isinstance(value, str):
+                # Handle commas, whitespace, etc.
+                cleaned = value.strip().replace(",", "")
+                return float(cleaned) if cleaned else default
+        except Exception:
+            pass
+        return default
+
+    @staticmethod
+    def _to_int(value, default: int = 0) -> int:
+        try:
+            if value is None:
+                return default
+            if isinstance(value, bool):
+                return int(value)
+            if isinstance(value, int):
+                return value
+            if isinstance(value, float):
+                return int(value)
+            if isinstance(value, str):
+                cleaned = value.strip().replace(",", "")
+                return int(float(cleaned)) if cleaned else default
+        except Exception:
+            pass
+        return default
+
     async def show_live_dashboard(self):
         """
         Display live dashboard with real-time updates.
@@ -258,27 +292,29 @@ class BeastModeDashboard:
             # Display top 5 positions
             positions_sorted = sorted(
                 positions,
-                key=lambda p: getattr(p, 'entry_price', 0) * getattr(p, 'quantity', 0),
+                key=lambda p: self._to_float(getattr(p, 'entry_price', 0)) * self._to_int(getattr(p, 'quantity', 0)),
                 reverse=True
             )
             
             for i, pos in enumerate(positions_sorted[:5], 1):
                 market_id = getattr(pos, 'market_id', 'Unknown')[:20]
                 side = getattr(pos, 'side', 'Unknown')
-                entry_price = getattr(pos, 'entry_price', 0)
-                quantity = getattr(pos, 'quantity', 0)
+                entry_price = self._to_float(getattr(pos, 'entry_price', 0.0))
+                quantity = self._to_int(getattr(pos, 'quantity', 0))
                 stop_loss = getattr(pos, 'stop_loss_price', None)
                 take_profit = getattr(pos, 'take_profit_price', None)
+                stop_loss_f = self._to_float(stop_loss, default=0.0) if stop_loss is not None else None
+                take_profit_f = self._to_float(take_profit, default=0.0) if take_profit is not None else None
                 
                 exposure = entry_price * quantity
                 
                 print(f"{i}. {market_id}...")
                 print(f"   Side: {side} | Entry: ${entry_price:.2f} | Qty: {quantity}")
                 print(f"   Exposure: ${exposure:.0f}")
-                if stop_loss:
-                    print(f"   Stop Loss: ${stop_loss:.2f}")
-                if take_profit:
-                    print(f"   Take Profit: ${take_profit:.2f}")
+                if stop_loss_f is not None:
+                    print(f"   Stop Loss: ${stop_loss_f:.2f}")
+                if take_profit_f is not None:
+                    print(f"   Take Profit: ${take_profit_f:.2f}")
                 print()
             
             if len(positions) > 5:
@@ -344,17 +380,61 @@ class BeastModeDashboard:
     async def _get_recent_trade_performance(self) -> Dict:
         """Get recent trade performance metrics."""
         try:
-            # This would query the trade_logs table for recent performance
-            # Simplified implementation
+            import aiosqlite
+            from datetime import datetime, timedelta
+            
+            today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            week_ago = today_start - timedelta(days=7)
+            
+            async with aiosqlite.connect(self.db_manager.db_path) as db:
+                db.row_factory = aiosqlite.Row
+                
+                # Get today's trades
+                cursor = await db.execute("""
+                    SELECT COUNT(*) as count, COALESCE(SUM(pnl), 0) as total_pnl
+                    FROM trade_logs
+                    WHERE DATE(exit_timestamp) = DATE('now')
+                """)
+                today_row = await cursor.fetchone()
+                trades_today = today_row['count'] if today_row else 0
+                pnl_today = today_row['total_pnl'] if today_row else 0.0
+                
+                # Get 7-day win rate
+                cursor = await db.execute("""
+                    SELECT 
+                        COUNT(*) as total,
+                        SUM(CASE WHEN pnl > 0 THEN 1 ELSE 0 END) as wins
+                    FROM trade_logs
+                    WHERE exit_timestamp >= ?
+                """, (week_ago.isoformat(),))
+                week_row = await cursor.fetchone()
+                total_week = week_row['total'] if week_row else 0
+                wins_week = week_row['wins'] if week_row else 0
+                win_rate_7d = (wins_week / total_week) if total_week > 0 else 0.0
+                
+                # Get average holding time
+                cursor = await db.execute("""
+                    SELECT AVG((julianday(exit_timestamp) - julianday(entry_timestamp)) * 24) as avg_hours
+                    FROM trade_logs
+                    WHERE exit_timestamp >= ? AND entry_timestamp IS NOT NULL
+                """, (week_ago.isoformat(),))
+                avg_row = await cursor.fetchone()
+                avg_holding_time = avg_row['avg_hours'] if avg_row and avg_row['avg_hours'] else 0.0
+                
+                return {
+                    'trades_today': trades_today,
+                    'pnl_today': pnl_today,
+                    'win_rate_7d': win_rate_7d,
+                    'avg_holding_time': avg_holding_time
+                }
+        except Exception as e:
+            print(f"Error getting trade performance: {e}")
             return {
                 'trades_today': 0,
                 'pnl_today': 0.0,
                 'win_rate_7d': 0.0,
                 'avg_holding_time': 0.0
             }
-        except Exception as e:
-            print(f"Error getting trade performance: {e}")
-            return {}
 
     async def _get_cost_analysis(self) -> Dict:
         """Get AI cost analysis from llm_queries table."""

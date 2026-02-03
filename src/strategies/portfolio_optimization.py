@@ -941,7 +941,7 @@ async def _evaluate_immediate_trade(
             confidence=opportunity.confidence,
             additional_filters={
                 'volume': getattr(opportunity, 'volume', 1000),
-                'min_volume': 1000,
+                'min_volume': 200,  # Aligned with settings.min_volume
                 'time_to_expiry_days': opportunity.time_to_expiry,
                 'max_time_to_expiry': 365
             }

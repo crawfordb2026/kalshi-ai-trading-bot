@@ -57,9 +57,9 @@ async def process_and_queue_markets(
         await db_manager.upsert_markets(markets_to_upsert)
         logger.info(f"Successfully upserted {len(markets_to_upsert)} markets.")
 
-        # Primary filtering criteria - INCREASED for better liquidity
-        min_volume: float = 500.0  # INCREASED: Higher volume threshold for better execution (was 100, now 500)
-        min_volume_for_ai_analysis: float = 1000.0  # INCREASED: Higher volume for AI analysis (was 150, now 1000)  
+        # Primary filtering criteria - ALIGNED with trading system
+        min_volume: float = 200.0  # Aligned with unified trading system volume_min=200
+        min_volume_for_ai_analysis: float = 200.0  # Aligned with settings.min_volume_for_ai_analysis  
         preferred_categories: List[str] = []  # Empty = all categories allowed
         excluded_categories: List[str] = []  # Empty = no categories excluded
 

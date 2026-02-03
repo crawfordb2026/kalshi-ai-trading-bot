@@ -384,7 +384,8 @@ Provide a brief, factual summary under {max_length//2} words. If no current info
         """
         # Calculate costs and usage
         sources_used = getattr(response.usage, 'num_sources_used', 0) if hasattr(response, 'usage') else 0
-        search_cost = sources_used * 0.025  # $0.025 per source
+        # FIXED: Reduced from $0.025 to $0.01 per source based on actual spending ($14.13 actual vs $23.53 estimated)
+        search_cost = sources_used * 0.01  # $0.01 per source (actual cost is lower than original estimate)
         
         self.total_cost += search_cost
         self.request_count += 1
@@ -807,8 +808,10 @@ Required format:
                         raise ValueError(f"Model {model_to_use} returned empty response after {max_retries} attempts")
                 
                 # Estimate cost (rough estimation for non-search requests)
+                # FIXED: Reduced from $0.00001 to $0.000006 per token based on actual spending analysis
+                # Actual spending: $14.13 for 1491 queries = $0.0095/query average
                 estimated_tokens = getattr(response.usage, 'total_tokens', len(response_content) // 4) if hasattr(response, 'usage') else len(response_content) // 4
-                cost = estimated_tokens * 0.00001
+                cost = estimated_tokens * 0.000006  # Adjusted to match actual Grok API costs
                 
                 self.total_cost += cost
                 self.request_count += 1
@@ -909,7 +912,7 @@ Required format:
             if response_content and response_content.strip():
                 # Estimate cost for fallback model
                 estimated_tokens = getattr(response.usage, 'total_tokens', len(response_content) // 4) if hasattr(response, 'usage') else len(response_content) // 4
-                cost = estimated_tokens * 0.00001  # Same cost estimation
+                cost = estimated_tokens * 0.000006  # Adjusted to match actual Grok API costs
                 
                 self.total_cost += cost
                 self.request_count += 1

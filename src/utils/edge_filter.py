@@ -190,7 +190,7 @@ class EdgeFilter:
         # Additional filters if provided
         if additional_filters:
             volume = additional_filters.get('volume', 0)
-            min_volume = additional_filters.get('min_volume', 1000)
+            min_volume = additional_filters.get('min_volume', 200)  # Aligned with settings
             
             if volume < min_volume:
                 return False, f"Volume {volume} below minimum {min_volume}", edge_result
